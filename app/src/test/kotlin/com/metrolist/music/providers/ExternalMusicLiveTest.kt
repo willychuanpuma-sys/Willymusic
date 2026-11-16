@@ -38,7 +38,21 @@ class ExternalMusicLiveTest {
                 }
             }
             assertTrue("The real response must yield playable tracks rather than empty parsed results", tracks.isNotEmpty())
-            val stream = repository.resolveStream(tracks.first().id, clientId)
+            val stream = try {
+                repository.resolveStream(tracks.first().id, clientId)
+            } catch (e: java.io.IOException) {
+                val id = tracks.first().id.substringAfter(':')
+                for (type in listOf("", "&type=single%20albumtrack")) {
+                    val url = "https://api.jamendo.com/v3.0/tracks/?client_id=" + clientId +
+                        "&format=json&audioformat=mp32&limit=30&id=" + id + type
+                    val raw = Json.parseToJsonElement(URI(url).toURL().readText()).jsonObject
+                    val results = raw["results"]?.jsonArray
+                    val audio = results?.firstOrNull()?.jsonObject?.get("audio")?.toString().orEmpty().trim('"')
+                    println("Direct ID check: type=" + type + ", headers=" + raw["headers"] +
+                        ", count=" + results?.size + ", audio location=" + runCatching { URI(audio).host }.getOrNull())
+                }
+                throw e
+            }
             assertEquals("https", URI(stream).scheme)
             assertTrue(ExternalMusicRepository.isProviderUrl(stream, "jamendo"))
         }
