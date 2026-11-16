@@ -14,6 +14,8 @@ import java.time.LocalDateTime
 import java.time.ZoneOffset
 
 val EnableHighRefreshRateKey = booleanPreferencesKey("enableHighRefreshRate")
+val MusicSearchSourceKey = stringPreferencesKey("musicSearchSource")
+val JamendoClientIdKey = stringPreferencesKey("jamendoClientId")
 val EnableLandscapeScalingKey = booleanPreferencesKey("enableLandscapeScaling")
 val DynamicThemeKey = booleanPreferencesKey("dynamicTheme")
 val SelectedThemeColorKey = intPreferencesKey("selectedThemeColor")

@@ -317,7 +317,7 @@ fun PlayerMenu(
             NewActionGrid(
                 actions =
                     listOfNotNull(
-                        if (!isListenTogetherGuest) {
+                        if (!isListenTogetherGuest && !com.metrolist.music.providers.ExternalMusicRepository.isExternal(mediaMetadata.id)) {
                             NewAction(
                                 icon = {
                                     Icon(
@@ -367,7 +367,7 @@ fun PlayerMenu(
                                 val clip =
                                     android.content.ClipData.newPlainText(
                                         "Song Link",
-                                        "https://music.youtube.com/watch?v=${mediaMetadata.id}",
+                                        com.metrolist.music.providers.ExternalMusicRepository.shareUrl(mediaMetadata.id),
                                     )
                                 clipboard.setPrimaryClip(clip)
                                 android.widget.Toast

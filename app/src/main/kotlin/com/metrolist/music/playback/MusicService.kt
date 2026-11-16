@@ -81,6 +81,9 @@ import androidx.media3.exoplayer.mediacodec.MediaCodecSelector
 import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
 import androidx.media3.exoplayer.source.ShuffleOrder.DefaultShuffleOrder
 import androidx.media3.extractor.ExtractorsFactory
+import androidx.media3.extractor.mp3.Mp3Extractor
+import androidx.media3.extractor.ogg.OggExtractor
+import androidx.media3.extractor.flac.FlacExtractor
 import androidx.media3.extractor.mkv.MatroskaExtractor
 import androidx.media3.extractor.mp4.FragmentedMp4Extractor
 import androidx.media3.extractor.mp4.Mp4Extractor
@@ -213,6 +216,8 @@ import com.metrolist.music.utils.SyncUtils
 import com.metrolist.music.utils.getArtistSeparator
 import com.metrolist.music.utils.joinToArtistString
 import com.metrolist.music.utils.InnerTubeXPlayer
+import com.metrolist.music.providers.ExternalMusicRepository
+import com.metrolist.music.constants.JamendoClientIdKey
 import com.metrolist.music.utils.dataStore
 import com.metrolist.music.utils.get
 import com.metrolist.music.utils.reportException
@@ -512,6 +517,7 @@ class MusicService :
 
     // URL cache for stream URLs - class-level so it can be invalidated on errors
     private val songUrlCache = StreamUrlCache()
+    private val externalMusicRepository = ExternalMusicRepository()
 
     // Tracks mediaIds for which a recoverSong() coroutine is currently in flight.
     //
@@ -1373,7 +1379,7 @@ class MusicService :
                 val account = Triple(YouTube.cookie, YouTube.dataSyncId, YouTube.authUser)
                 val nonce = com.metrolist.innertubex.extraction.generateClientPlaybackNonce()
                 suspend {
-                    withContext(Dispatchers.IO) {
+                    if (ExternalMusicRepository.isExternal(videoId)) true else withContext(Dispatchers.IO) {
                         YouTube.registerPlayback(videoId, nonce) {
                             !dataStore.get(PauseListenHistoryKey, false) &&
                                 account == Triple(YouTube.cookie, YouTube.dataSyncId, YouTube.authUser)
@@ -1711,7 +1717,7 @@ class MusicService :
             }
         }
 
-        if (!database.hasRelatedSongs(mediaId)) {
+        if (!ExternalMusicRepository.isExternal(mediaId) && !database.hasRelatedSongs(mediaId)) {
             val relatedEndpoint =
                 YouTube.next(WatchEndpoint(videoId = mediaId)).getOrNull()?.relatedEndpoint
                     ?: return
@@ -1877,6 +1883,7 @@ class MusicService :
 
         val currentIndex = player.currentMediaItemIndex
         val currentMediaId = currentMediaMetadata.id
+        if (ExternalMusicRepository.isExternal(currentMediaId)) return
 
         scope.launch(SilentHandler) {
             // Use simple videoId to let YouTube personalize recommendations
@@ -3340,10 +3347,11 @@ class MusicService :
         incrementRetryCount(mediaId)
 
         songUrlCache.invalidate(mediaId)
-        failedStreamClient?.let { InnerTubeXPlayer.markStreamClientFailed(mediaId, it) }
+        failedStreamClient?.takeUnless { ExternalMusicRepository.isExternal(mediaId) }
+            ?.let { InnerTubeXPlayer.markStreamClientFailed(mediaId, it) }
         Timber.tag(TAG).d("Cleared cached URL after $retryReason (client=$failedStreamClient)")
 
-        if (refreshCipherConfig) {
+        if (refreshCipherConfig && !ExternalMusicRepository.isExternal(mediaId)) {
             // A rejection can mean the cipher produced a wrong-but-non-throwing signature. If a
             // rate-limited refresh corrects the table, allow failed clients again on the next resolution.
             scope.launch {
@@ -3821,6 +3829,21 @@ class MusicService :
                 preserveCachedIfMissing = true,
             )
 
+            if (ExternalMusicRepository.isExternal(mediaId)) {
+                currentStreamClient.value = mediaId.substringBefore(':')
+                recoverSongDeduped(mediaId)
+                val stream = songUrlCache[mediaId] ?: run {
+                    val generation = songUrlCache.generation(mediaId)
+                    val url = runBlocking(Dispatchers.IO) { resolveExternalStream(mediaId) }
+                    songUrlCache.put(
+                        mediaId, url, emptyMap(), mediaId.substringBefore(':'),
+                        expiresInSeconds = 300, expectedGeneration = generation,
+                    )
+                    CachedStreamUrl(url, emptyMap(), mediaId.substringBefore(':'))
+                }
+                return@Factory dataSpec.withResolvedStream(stream)
+            }
+
             val shouldBypassCache = bypassCacheForQualityChange.contains(mediaId)
 
             if (!shouldBypassCache) {
@@ -3991,7 +4014,7 @@ class MusicService :
         DefaultMediaSourceFactory(
             createDataSourceFactory(normalizationProcessor, playerProvider),
             ExtractorsFactory {
-                arrayOf(MatroskaExtractor(), FragmentedMp4Extractor(), Mp4Extractor())
+                arrayOf(MatroskaExtractor(), FragmentedMp4Extractor(), Mp4Extractor(), Mp3Extractor(), OggExtractor(), FlacExtractor())
             },
         )
 
@@ -4265,6 +4288,7 @@ class MusicService :
         isRunning = false
 
         if (!::player.isInitialized) {
+            externalMusicRepository.close()
             try {
                 scope.cancel()
             } catch (_: Exception) {
@@ -4322,6 +4346,7 @@ class MusicService :
         controllerFuture = null
         releaseExoPlayer(player)
         scope.cancel()
+        externalMusicRepository.close()
         super.onDestroy()
         shutdownDeferred.complete(Unit)
     }
@@ -4771,6 +4796,9 @@ class MusicService :
     suspend fun getStreamUrl(mediaId: String): String? =
         withContext(Dispatchers.IO) {
             try {
+                if (ExternalMusicRepository.isExternal(mediaId)) {
+                    return@withContext resolveExternalStream(mediaId)
+                }
                 val song = database.songEntity(mediaId)
                 val playbackData =
                     InnerTubeXPlayer
@@ -4789,6 +4817,9 @@ class MusicService :
                 null
             }
         }
+
+    private suspend fun resolveExternalStream(mediaId: String): String =
+        externalMusicRepository.resolveStream(mediaId, dataStore.get(JamendoClientIdKey, ""))
 
     /**
      * Initialize Google Cast support
