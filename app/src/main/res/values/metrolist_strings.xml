@@ -998,4 +998,25 @@
     <string name="jamendo_client_id_hint">Configura el identificador de Willy Music obtenido en developer.jamendo.com. No uses la contraseña de tu cuenta.</string>
     <string name="external_music_error">No se pudo consultar esta fuente. Revisa tu conexión y, para Jamendo, el Client ID.</string>
     <string name="external_music_streaming_only">Las fuentes externas están disponibles para escuchar en línea. La descarga aún no está habilitada.</string>
+    <string name="video_title">Video</string>
+    <string name="video_open">Abrir modo video</string>
+    <string name="video_source_hint">Abre un video de tu teléfono o pega un enlace directo HTTPS a un archivo MP4 o WebM. Las canciones de Jamendo y HearThis siguen siendo audio.</string>
+    <string name="video_link">Enlace directo del video</string>
+    <string name="video_open_link">Abrir enlace</string>
+    <string name="video_open_local">Elegir del teléfono</string>
+    <string name="video_local_title">Video del teléfono</string>
+    <string name="video_link_title">Video por enlace</string>
+    <string name="video_close">Volver</string>
+    <string name="video_audio_only">Solo audio</string>
+    <string name="video_fullscreen">Pantalla completa</string>
+    <string name="video_back">−5 s</string>
+    <string name="video_forward">+5 s</string>
+    <string name="video_play">Reproducir</string>
+    <string name="video_pause">Pausar</string>
+    <string name="video_invalid_source">Selecciona un video accesible o usa un enlace directo HTTPS. Las páginas de YouTube y las listas HLS no son archivos de video compatibles en este modo.</string>
+    <string name="video_playback_error">No se pudo reproducir este video. Comprueba el enlace, el acceso al archivo y que el formato sea compatible con tu teléfono.</string>
+    <string name="external_music_query">Buscar en esta fuente</string>
+    <string name="external_music_search">Buscar ahora</string>
+    <string name="external_music_empty">No hay resultados para «%1$s» en esta fuente. Puedes probar otro título o género.</string>
+    <string name="external_music_count">%1$d resultados para «%2$s»</string>
 </resources>

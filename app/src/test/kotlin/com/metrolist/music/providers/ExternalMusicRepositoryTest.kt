@@ -99,6 +99,19 @@ class ExternalMusicRepositoryTest {
         }
     }
 
+    @Test fun `incompatible Jamendo audio is reported as an error rather than no results`() = runBlocking {
+        val engine = MockEngine {
+            respond("""{"headers":{"status":"success"},"results":[{"id":"72","name":"Song","audio":"https://unrelated.example/audio"}]}""",
+                headers = headersOf("Content-Type", "application/json"))
+        }
+        ExternalMusicRepository(HttpClient(engine)).use { repository ->
+            try {
+                repository.search("jamendo", "Song", "own-app-id")
+                fail("Expected unsupported audio error")
+            } catch (_: IOException) { }
+        }
+    }
+
     @Test fun `malformed HearThis paths cannot change the API request target`() = runBlocking {
         ExternalMusicRepository(HttpClient(MockEngine { error("Must not request invalid path") })).use { repository ->
             try {

@@ -45,13 +45,20 @@ class ExternalMusicRepository(
                 Json.parseToJsonElement(response.bodyAsText()).let { it as JsonArray }
                     .mapNotNull { parseHearThis(it.jsonObject) }
             }
-            JAMENDO -> jamendo(jamendoClientId, query = query)
-                .mapNotNull { parseJamendo(it.jsonObject) }
+            JAMENDO -> {
+                val results = jamendo(jamendoClientId, query = query)
+                val tracks = results.mapNotNull { parseJamendo(it.jsonObject) }
+                if (results.isNotEmpty() && tracks.isEmpty()) {
+                    throw IOException("Jamendo returned tracks without compatible audio URLs")
+                }
+                tracks
+            }
             else -> error("Unknown music source")
         }.distinctBy { it.id }
     }
 
     suspend fun resolveStream(mediaId: String, jamendoClientId: String): String {
+        if (DirectVideoSource.isVideo(mediaId)) return DirectVideoSource.uri(mediaId)
         val source = mediaId.substringBefore(':')
         val trackId = mediaId.substringAfter(':', "")
         val url = when (source) {
@@ -97,10 +104,12 @@ class ExternalMusicRepository(
     companion object {
         const val HEARTHIS = "hearthis"
         const val JAMENDO = "jamendo"
+        const val DEFAULT_JAMENDO_CLIENT_ID = "4e997d93"
 
-        fun isExternal(mediaId: String) = mediaId.startsWith("$HEARTHIS:") || mediaId.startsWith("$JAMENDO:")
+        fun isExternal(mediaId: String) = DirectVideoSource.isVideo(mediaId) || mediaId.startsWith("$HEARTHIS:") || mediaId.startsWith("$JAMENDO:")
 
         fun shareUrl(mediaId: String): String = when {
+            DirectVideoSource.isVideo(mediaId) -> DirectVideoSource.uri(mediaId)
             mediaId.startsWith("$HEARTHIS:") -> "https://hearthis.at/${mediaId.substringAfter(':')}/"
             mediaId.startsWith("$JAMENDO:") -> "https://www.jamendo.com/track/${mediaId.substringAfter(':')}"
             else -> "https://music.youtube.com/watch?v=$mediaId"

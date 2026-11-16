@@ -451,6 +451,9 @@ fun OnlineSearchResult(
                     },
         )
 
+        androidx.compose.material3.TextButton(onClick = { navController.navigate("video") }) {
+            Text(stringResource(R.string.video_open))
+        }
         ChipsRow(
             chips = listOf("youtube" to "YouTube Music", ExternalMusicRepository.HEARTHIS to "HearThis", ExternalMusicRepository.JAMENDO to "Jamendo"),
             currentValue = musicSource,

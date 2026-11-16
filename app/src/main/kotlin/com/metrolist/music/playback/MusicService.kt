@@ -217,6 +217,7 @@ import com.metrolist.music.utils.getArtistSeparator
 import com.metrolist.music.utils.joinToArtistString
 import com.metrolist.music.utils.InnerTubeXPlayer
 import com.metrolist.music.providers.ExternalMusicRepository
+import com.metrolist.music.providers.DirectVideoSource
 import com.metrolist.music.constants.JamendoClientIdKey
 import com.metrolist.music.utils.dataStore
 import com.metrolist.music.utils.get
@@ -4819,7 +4820,8 @@ class MusicService :
         }
 
     private suspend fun resolveExternalStream(mediaId: String): String =
-        externalMusicRepository.resolveStream(mediaId, dataStore.get(JamendoClientIdKey, ""))
+        externalMusicRepository.resolveStream(mediaId, dataStore.get(JamendoClientIdKey, ExternalMusicRepository.DEFAULT_JAMENDO_CLIENT_ID)
+            .ifBlank { ExternalMusicRepository.DEFAULT_JAMENDO_CLIENT_ID })
 
     /**
      * Initialize Google Cast support
@@ -4852,6 +4854,9 @@ class MusicService :
         
         val mediaCrossfadeDuration = crossfadeDuration.toLong()
 
+        if (DirectVideoSource.isVideo(player.currentMediaItem?.mediaId)) return
+        val nextIndex = player.nextMediaItemIndex
+        if (nextIndex != C.INDEX_UNSET && DirectVideoSource.isVideo(player.getMediaItemAt(nextIndex).mediaId)) return
         if (!crossfadeEnabled || crossfadeDuration <= 0f || player.duration == C.TIME_UNSET || player.duration <= mediaCrossfadeDuration) return
         if (crossfadeGapless && isNextItemGapless()) return
         if (!player.hasNextMediaItem() && player.repeatMode != REPEAT_MODE_ONE) return
@@ -4896,6 +4901,8 @@ class MusicService :
                 player.nextMediaItemIndex
             }
         if (targetIndex == C.INDEX_UNSET) return
+        if (DirectVideoSource.isVideo(player.currentMediaItem?.mediaId) ||
+            DirectVideoSource.isVideo(player.getMediaItemAt(targetIndex).mediaId)) return
 
         secondaryPlayer = createExoPlayer()
         val secPlayer = secondaryPlayer!!

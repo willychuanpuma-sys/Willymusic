@@ -228,6 +228,9 @@ fun SearchScreen(
                         )
 
                         Row {
+                            androidx.compose.material3.TextButton(onClick = { navController.navigate("video") }) {
+                                Text(stringResource(R.string.video_title))
+                            }
                             if (query.text.isNotEmpty()) {
                                 IconButton(onClick = { query = TextFieldValue("") }) {
                                     Icon(

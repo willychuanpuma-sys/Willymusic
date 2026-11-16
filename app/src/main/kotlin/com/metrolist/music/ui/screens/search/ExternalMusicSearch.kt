@@ -45,22 +45,25 @@ import kotlinx.coroutines.CancellationException
 @Composable
 fun ExternalMusicSearch(query: String, source: String, activeId: String?, isPlaying: Boolean) {
     val playerConnection = LocalPlayerConnection.current ?: return
-    var clientId by rememberPreference(JamendoClientIdKey, "")
-    var clientIdInput by remember(clientId) { mutableStateOf(clientId) }
+    var clientId by rememberPreference(JamendoClientIdKey, ExternalMusicRepository.DEFAULT_JAMENDO_CLIENT_ID)
+    val effectiveClientId = clientId.ifBlank { ExternalMusicRepository.DEFAULT_JAMENDO_CLIENT_ID }
+    var queryInput by remember(query, source) { mutableStateOf(query) }
+    var submittedQuery by remember(query, source) { mutableStateOf(query) }
+    var clientIdInput by remember(effectiveClientId) { mutableStateOf(effectiveClientId) }
     var tracks by remember(query, source) { mutableStateOf<List<ExternalTrack>>(emptyList()) }
     var loading by remember(query, source) { mutableStateOf(false) }
     var failed by remember(query, source) { mutableStateOf(false) }
     var attempt by remember { mutableIntStateOf(0) }
-    val needsClientId = source == ExternalMusicRepository.JAMENDO && clientId.isBlank()
+    val needsClientId = source == ExternalMusicRepository.JAMENDO && effectiveClientId.isBlank()
 
-    LaunchedEffect(query, source, clientId, attempt) {
+    LaunchedEffect(submittedQuery, source, effectiveClientId, attempt) {
         tracks = emptyList()
         failed = false
         if (needsClientId) return@LaunchedEffect
         loading = true
         val repository = ExternalMusicRepository()
         try {
-            tracks = repository.search(source, query, clientId)
+            tracks = repository.search(source, submittedQuery, effectiveClientId)
         } catch (e: CancellationException) {
             throw e
         } catch (_: JamendoClientIdRequired) {
@@ -74,6 +77,18 @@ fun ExternalMusicSearch(query: String, source: String, activeId: String?, isPlay
     }
 
     Column(Modifier.fillMaxSize()) {
+        OutlinedTextField(
+            value = queryInput,
+            onValueChange = { queryInput = it },
+            label = { Text(stringResource(R.string.external_music_query)) },
+            singleLine = true,
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+        )
+        Button(
+            onClick = { submittedQuery = queryInput.trim(); attempt++ },
+            enabled = queryInput.isNotBlank() && !loading,
+            modifier = Modifier.padding(horizontal = 16.dp),
+        ) { Text(stringResource(R.string.external_music_search)) }
         if (source == ExternalMusicRepository.JAMENDO) {
             OutlinedTextField(
                 value = clientIdInput,
@@ -102,7 +117,10 @@ fun ExternalMusicSearch(query: String, source: String, activeId: String?, isPlay
                 }
             }
             if (!loading && !failed && !needsClientId && tracks.isEmpty()) item {
-                EmptyPlaceholder(icon = R.drawable.search, text = stringResource(R.string.no_results_found))
+                EmptyPlaceholder(icon = R.drawable.search, text = stringResource(R.string.external_music_empty, submittedQuery))
+            }
+            if (!loading && !failed && tracks.isNotEmpty()) item {
+                Text(stringResource(R.string.external_music_count, tracks.size, submittedQuery), Modifier.padding(16.dp))
             }
             items(tracks, key = { it.id }) { track ->
                 val song = track.asSongItem()
