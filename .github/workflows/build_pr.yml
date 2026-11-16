@@ -18,6 +18,26 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  jamendo_probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - name: Check public Jamendo search response
+        env:
+          JAMENDO_CLIENT_ID: "4e997d93"
+        run: |
+          python3 - <<'PY'
+          import json, os, urllib.request, urllib.parse
+          params = urllib.parse.urlencode({"client_id": os.environ["JAMENDO_CLIENT_ID"], "format": "json", "search": "piano", "limit": 2, "audioformat": "mp32"})
+          try:
+              with urllib.request.urlopen("https://api.jamendo.com/v3.0/tracks/?" + params, timeout=25) as r:
+                  data = json.load(r)
+              tracks = data.get("results", [])
+              print(json.dumps({"status": data.get("headers", {}).get("status"), "code": data.get("headers", {}).get("code"), "returned": len(tracks), "audio_locations": [{"scheme": urllib.parse.urlsplit(t.get("audio", "")).scheme, "host": urllib.parse.urlsplit(t.get("audio", "")).hostname} for t in tracks]}))
+          except Exception as e:
+              print(type(e).__name__ + ": public API check could not complete")
+          PY
+
   build:
     runs-on: ubuntu-latest
     timeout-minutes: 20
