@@ -26,6 +26,7 @@ import coil3.request.ImageRequest
 import com.metrolist.innertube.YouTube
 import com.metrolist.innertube.models.SongItem
 import com.metrolist.innertubex.extraction.ContentHints
+import com.metrolist.music.R
 import com.metrolist.music.constants.AudioQuality
 import com.metrolist.music.constants.AudioQualityKey
 import com.metrolist.music.db.MusicDatabase
@@ -323,6 +324,12 @@ constructor(
     fun download(song: SongItem) = download(song.toMediaMetadata())
 
     fun download(mediaMetadata: MediaMetadata) {
+        if (com.metrolist.music.providers.ExternalMusicRepository.isExternal(mediaMetadata.id)) {
+            android.os.Handler(android.os.Looper.getMainLooper()).post {
+                android.widget.Toast.makeText(context, R.string.external_music_streaming_only, android.widget.Toast.LENGTH_LONG).show()
+            }
+            return
+        }
         scope.launch {
             downloadPreparations.withPermit {
                 if (!shouldPrepareDownload(downloads.value[mediaMetadata.id]?.state)) return@withPermit

@@ -88,6 +88,8 @@ import com.metrolist.music.LocalDatabase
 import com.metrolist.music.LocalPlayerConnection
 import com.metrolist.music.R
 import com.metrolist.music.constants.AutoRadioQueueKey
+import com.metrolist.music.constants.MusicSearchSourceKey
+import com.metrolist.music.providers.ExternalMusicRepository
 import com.metrolist.music.constants.HideVideoSongsKey
 import com.metrolist.music.constants.MiniPlayerBottomSpacing
 import com.metrolist.music.constants.MiniPlayerHeight
@@ -161,6 +163,7 @@ fun OnlineSearchResult(
     val pauseSearchHistory by rememberPreference(PauseSearchHistoryKey, defaultValue = false)
     val hideVideoSongs by rememberPreference(HideVideoSongsKey, defaultValue = false)
     val autoRadioQueue by rememberPreference(AutoRadioQueueKey, defaultValue = true)
+    var musicSource by rememberPreference(MusicSearchSourceKey, defaultValue = "youtube")
 
     BackHandler(enabled = isSearchFocused) {
         isSearchFocused = false
@@ -447,6 +450,19 @@ fun OnlineSearchResult(
                         }
                     },
         )
+
+        androidx.compose.material3.TextButton(onClick = { navController.navigate("video") }) {
+            Text(stringResource(R.string.video_open))
+        }
+        ChipsRow(
+            chips = listOf("youtube" to "YouTube Music", ExternalMusicRepository.HEARTHIS to "HearThis", ExternalMusicRepository.JAMENDO to "Jamendo"),
+            currentValue = musicSource,
+            onValueUpdate = { musicSource = it },
+        )
+        if (musicSource != "youtube") {
+            ExternalMusicSearch(decodedQuery, musicSource, mediaMetadata?.id, isPlaying)
+            return@Column
+        }
 
         // Main content area below search bar
         Box(modifier = Modifier.weight(1f)) {

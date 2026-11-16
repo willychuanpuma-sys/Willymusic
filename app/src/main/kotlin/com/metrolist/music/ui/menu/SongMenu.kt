@@ -555,7 +555,7 @@ fun SongMenu(
                                     Intent().apply {
                                         action = Intent.ACTION_SEND
                                         type = "text/plain"
-                                        putExtra(Intent.EXTRA_TEXT, "https://music.youtube.com/watch?v=${song.id}")
+                                        putExtra(Intent.EXTRA_TEXT, com.metrolist.music.providers.ExternalMusicRepository.shareUrl(song.id))
                                     }
                                 context.startActivity(Intent.createChooser(intent, null))
                             },
@@ -596,7 +596,7 @@ fun SongMenu(
                         } else {
                             null
                         },
-                        if (!isGuest) {
+                        if (!isGuest && !com.metrolist.music.providers.ExternalMusicRepository.isExternal(song.id)) {
                             Material3MenuItemData(
                                 title = { Text(text = stringResource(R.string.start_radio)) },
                                 description = { Text(text = stringResource(R.string.start_radio_desc)) },

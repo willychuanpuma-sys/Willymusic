@@ -73,6 +73,8 @@ fun NavGraphBuilder.navigationBuilder(
     activity: Activity,
     snackbarHostState: SnackbarHostState,
 ) {
+    composable("video") { VideoScreen() }
+
     composable(Screens.Home.route) {
         HomeScreen(snackbarHostState = snackbarHostState)
     }
