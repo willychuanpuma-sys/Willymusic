@@ -112,6 +112,33 @@ class ExternalMusicRepositoryTest {
         }
     }
 
+    @Test fun `one empty Jamendo success is retried before returning results`() = runBlocking {
+        var requests = 0
+        val engine = MockEngine {
+            requests++
+            val results = if (requests == 1) "[]" else """[{"id":"72","name":"Song","audio":"https://prod.jamendo.com/stream.mp3"}]"""
+            respond("""{"headers":{"status":"success"},"results":$results}""",
+                headers = headersOf("Content-Type", "application/json"))
+        }
+        ExternalMusicRepository(HttpClient(engine)).use { repository ->
+            assertEquals("jamendo:72", repository.search("jamendo", "Song", "own-app-id").single().id)
+        }
+        assertEquals(2, requests)
+    }
+
+    @Test fun `a genuinely empty Jamendo search stops after one retry`() = runBlocking {
+        var requests = 0
+        val engine = MockEngine {
+            requests++
+            respond("""{"headers":{"status":"success"},"results":[]}""",
+                headers = headersOf("Content-Type", "application/json"))
+        }
+        ExternalMusicRepository(HttpClient(engine)).use { repository ->
+            assertTrue(repository.search("jamendo", "unknown query", "own-app-id").isEmpty())
+        }
+        assertEquals(2, requests)
+    }
+
     @Test fun `malformed HearThis paths cannot change the API request target`() = runBlocking {
         ExternalMusicRepository(HttpClient(MockEngine { error("Must not request invalid path") })).use { repository ->
             try {

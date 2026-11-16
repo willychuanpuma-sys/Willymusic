@@ -6,6 +6,7 @@ import io.ktor.client.plugins.HttpTimeout
 import io.ktor.client.request.get
 import io.ktor.client.request.parameter
 import io.ktor.client.statement.bodyAsText
+import kotlinx.coroutines.delay
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
@@ -83,6 +84,14 @@ class ExternalMusicRepository(
     }
 
     private suspend fun jamendo(clientId: String, query: String? = null, id: String? = null): JsonArray {
+        val results = fetchJamendo(clientId, query, id)
+        if (results.isNotEmpty()) return results
+        // The public API intermittently returns an empty success for available tracks.
+        delay(350)
+        return fetchJamendo(clientId, query, id)
+    }
+
+    private suspend fun fetchJamendo(clientId: String, query: String?, id: String?): JsonArray {
         if (clientId.isBlank()) throw JamendoClientIdRequired()
         val response = client.get("https://api.jamendo.com/v3.0/tracks/") {
             parameter("client_id", clientId.trim())
