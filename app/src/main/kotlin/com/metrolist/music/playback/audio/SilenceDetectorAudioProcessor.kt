@@ -50,6 +50,21 @@ class SilenceDetectorAudioProcessor(
     override fun queueInput(inputBuffer: ByteBuffer) {
         if (!inputBuffer.hasRemaining()) return
 
+        if (BrainAudioLevel.active) {
+            // Absolute reads preserve the buffer position and keep audio processing unchanged.
+            inputBuffer.order(ByteOrder.LITTLE_ENDIAN)
+            val start = inputBuffer.position()
+            val end = inputBuffer.limit()
+            val stride = maxOf(2, ((end - start) / 96 / 2) * 2)
+            var peak = 0
+            var index = start
+            while (index + 1 < end) {
+                peak = maxOf(peak, abs(inputBuffer.getShort(index).toInt()))
+                index += stride
+            }
+            BrainAudioLevel.peak = (peak / 32768f).coerceIn(0f, 1f)
+        }
+
         if (instantModeEnabled && sampleRate > 0 && channelCount > 0) {
             detectSilence(inputBuffer)
         } else {
