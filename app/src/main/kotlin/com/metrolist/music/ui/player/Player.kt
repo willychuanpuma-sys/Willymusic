@@ -62,6 +62,7 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.FilledIconButton
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedIconButton
@@ -231,6 +232,9 @@ fun BottomSheetPlayer(
     val cropAlbumArt by rememberPreference(CropAlbumArtKey, false)
 
     var showInlineLyrics by rememberSaveable {
+        mutableStateOf(false)
+    }
+    var showBrainVisualizer by rememberSaveable {
         mutableStateOf(false)
     }
 
@@ -1949,13 +1953,44 @@ fun BottomSheetPlayer(
                                     positionProvider = { effectivePosition },
                                 )
                             } else {
-                                Thumbnail(
-                                    sliderPositionProvider = sliderPositionProvider,
-                                    modifier = Modifier.animateContentSize(),
-                                    isPlayerExpanded = isExpandedProvider,
-                                    isLandscape = true,
-                                    isListenTogetherGuest = isListenTogetherGuest,
-                                )
+                                Box(modifier = Modifier.fillMaxSize()) {
+                                    if (showBrainVisualizer) {
+                                        BrainMusicVisualizer(
+                                            isPlaying = effectiveIsPlaying,
+                                            modifier = Modifier.fillMaxSize().padding(12.dp),
+                                        )
+                                    } else {
+                                        Thumbnail(
+                                            sliderPositionProvider = sliderPositionProvider,
+                                            modifier = Modifier.fillMaxSize().animateContentSize(),
+                                            isPlayerExpanded = isExpandedProvider,
+                                            isLandscape = true,
+                                            isListenTogetherGuest = isListenTogetherGuest,
+                                        )
+                                    }
+                                IconButton(
+                                    onClick = { showBrainVisualizer = !showBrainVisualizer },
+                                    modifier = Modifier
+                                        .align(Alignment.BottomEnd)
+                                        .padding(20.dp)
+                                        .size(44.dp)
+                                        .clip(RoundedCornerShape(14.dp))
+                                        .background(MaterialTheme.colorScheme.surface.copy(alpha = .88f)),
+                                ) {
+                                    Icon(
+                                        painter = painterResource(
+                                            if (showBrainVisualizer) R.drawable.album else R.drawable.equalizer
+                                        ),
+                                        contentDescription = if (showBrainVisualizer) {
+                                            "Mostrar carátula"
+                                        } else {
+                                            "Mostrar cerebro musical"
+                                        },
+                                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        modifier = Modifier.size(22.dp),
+                                    )
+                                }
+                                }
                             }
                         }
                     }
@@ -2012,12 +2047,44 @@ fun BottomSheetPlayer(
                                     positionProvider = { effectivePosition },
                                 )
                             } else {
-                                Thumbnail(
-                                    sliderPositionProvider = sliderPositionProvider,
-                                    modifier = Modifier.nestedScroll(state.preUpPostDownNestedScrollConnection),
-                                    isPlayerExpanded = isExpandedProvider,
-                                    isListenTogetherGuest = isListenTogetherGuest,
-                                )
+                                Box(modifier = Modifier.fillMaxSize()) {
+                                    if (showBrainVisualizer) {
+                                        BrainMusicVisualizer(
+                                            isPlaying = effectiveIsPlaying,
+                                            modifier = Modifier.fillMaxSize().padding(12.dp),
+                                        )
+                                    } else {
+                                        Thumbnail(
+                                            sliderPositionProvider = sliderPositionProvider,
+                                            modifier = Modifier.fillMaxSize()
+                                                .nestedScroll(state.preUpPostDownNestedScrollConnection),
+                                            isPlayerExpanded = isExpandedProvider,
+                                            isListenTogetherGuest = isListenTogetherGuest,
+                                        )
+                                    }
+                                IconButton(
+                                    onClick = { showBrainVisualizer = !showBrainVisualizer },
+                                    modifier = Modifier
+                                        .align(Alignment.BottomEnd)
+                                        .padding(20.dp)
+                                        .size(44.dp)
+                                        .clip(RoundedCornerShape(14.dp))
+                                        .background(MaterialTheme.colorScheme.surface.copy(alpha = .88f)),
+                                ) {
+                                    Icon(
+                                        painter = painterResource(
+                                            if (showBrainVisualizer) R.drawable.album else R.drawable.equalizer
+                                        ),
+                                        contentDescription = if (showBrainVisualizer) {
+                                            "Mostrar carátula"
+                                        } else {
+                                            "Mostrar cerebro musical"
+                                        },
+                                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        modifier = Modifier.size(22.dp),
+                                    )
+                                }
+                                }
                             }
                         }
                     }
