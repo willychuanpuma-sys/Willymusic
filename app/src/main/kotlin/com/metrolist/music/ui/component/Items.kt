@@ -42,6 +42,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -100,6 +101,7 @@ import com.metrolist.innertube.models.YTItem
 import com.metrolist.music.LocalDatabase
 import com.metrolist.music.LocalArtistNameAliases
 import com.metrolist.music.LocalDownloadUtil
+import com.metrolist.music.LocalListenTogetherManager
 import com.metrolist.music.LocalNavController
 import com.metrolist.music.LocalPlayerConnection
 import com.metrolist.music.R
@@ -138,6 +140,28 @@ import kotlin.math.roundToInt
 import kotlin.jvm.JvmName
 
 const val ActiveBoxAlpha = 0.6f
+
+@Composable
+private fun QuickPlayNextButton(
+    mediaItem: MediaItem,
+    modifier: Modifier = Modifier,
+) {
+    val playerConnection = LocalPlayerConnection.current ?: return
+    val listenTogetherManager = LocalListenTogetherManager.current
+    if (listenTogetherManager?.let { it.isInRoom && !it.isHost } == true) return
+
+    IconButton(
+        onClick = { playerConnection.playNext(mediaItem) },
+        modifier = modifier.size(40.dp),
+    ) {
+        Icon(
+            painter = painterResource(R.drawable.playlist_play),
+            contentDescription = stringResource(R.string.play_next),
+            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.size(20.dp),
+        )
+    }
+}
 
 @Composable
 fun currentGridThumbnailHeight(): Dp {
@@ -555,7 +579,10 @@ fun SongListItem(
                      modifier = Modifier.size(ListThumbnailSize)
                  )
              },
-             trailingContent = trailingContent,
+             trailingContent = {
+                 if (!isSelected) QuickPlayNextButton(song.toMediaItem())
+                 trailingContent()
+             },
              modifier = modifier,
              isSelected = isSelected,
              isActive = isActive
@@ -635,6 +662,14 @@ fun SongGridItem(
         if (!isActive) {
             OverlayPlayButton(
                 visible = true
+            )
+            QuickPlayNextButton(
+                mediaItem = song.toMediaItem(),
+                modifier = Modifier
+                    .align(Alignment.TopEnd)
+                    .padding(6.dp)
+                    .clip(RoundedCornerShape(12.dp))
+                    .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.9f)),
             )
         }
     },
@@ -1211,7 +1246,12 @@ fun YouTubeListItem(
                     modifier = Modifier.size(ListThumbnailSize)
                 )
             },
-            trailingContent = trailingContent,
+            trailingContent = {
+                if (item is SongItem && !isSelected) {
+                    QuickPlayNextButton(item.copy(thumbnail = item.thumbnail.resize(544, 544)).toMediaItem())
+                }
+                trailingContent()
+            },
             modifier = modifier,
             isActive = isActive
         )
@@ -1312,6 +1352,14 @@ fun YouTubeGridItem(
         if (item is SongItem && !isActive) {
             OverlayPlayButton(
                 visible = true
+            )
+            QuickPlayNextButton(
+                mediaItem = item.copy(thumbnail = item.thumbnail.resize(544, 544)).toMediaItem(),
+                modifier = Modifier
+                    .align(Alignment.TopEnd)
+                    .padding(6.dp)
+                    .clip(RoundedCornerShape(12.dp))
+                    .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.9f)),
             )
         }
 
